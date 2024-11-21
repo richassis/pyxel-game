@@ -1,43 +1,81 @@
 import pyxel
+import numpy as np
 
 class Jogo:
     def __init__(self) -> None:
-        self.width = 200
-        self.height = 200
+        self.width = 100
+        self.height = 100
         
         pyxel.init(self.width, self.height, title="Jogo", fps=60)
 
         self.raio = 20
         self.velocidade = 1
 
+
         self.x = 20
         self.y = 20
 
-        self.barrierx = 180
-        self.barriery = 40
-        self.barrierw = 10
-        self.barrierh = 6
+
+        print(np.zeros((10,1)))
+
+        self.obstacles = np.zeros((self.height, self.width))
 
         pyxel.run(self.update, self.draw)
     
+
     def update(self):
 
         self.velocidade = 1
         if pyxel.btn(pyxel.KEY_SHIFT):
             self.velocidade = 3
 
-        # if self.x >= 100-self.raio or self.x <= 0+self.raio:
-        #     self.velocidade = self.velocidade * (-1)
+        self.keyboard_movement()
 
-        # self.x = self.x + self.velocidade
 
-        if not (self.x+self.raio >= self.barrierx and self.x+self.raio <= self.barrierx+self.barrierw):
+    
+    def draw(self):
+        pyxel.cls(15)
+        pyxel.circ(self.x, self.y, self.raio, 0)
 
-            if pyxel.btn(pyxel.KEY_D):
-                if self.x<self.width-self.raio:
-                    self.x += self.velocidade
+
+
+        self.add_rect_obstacle(60, 0, 6, 30, 0)
+
+        pass
+
+
+    def add_rect_obstacle(self, x, y, w, h, color):
+        
+        pyxel.rect(x, y, w, h, color)
+        self.obstacles[y:y+h, x:x+w] = 1
+        
+
+        with open('matrix.txt', 'w+') as f:
+            for line in self.obstacles:
+                f.write(' '.join([str(int(x)) for x in line]) + '\n')
+    
+
+    def is_position_allowed(self, x, y):
+
+        if x>len(self.obstacles) or x<0 or y>len(self.obstacles[0]) or y<0:
+            return False
             
-        #if not (self.y+self.raio)
+
+        if self.obstacles[x,y]:
+            return False
+        else:
+            return True
+        
+        
+
+    def keyboard_movement(self):
+
+        if pyxel.btn(pyxel.KEY_D):
+            target_x = self.x + self.velocidade
+            if self.is_position_allowed(target_x, self.y):
+                self.x=target_x
+
+
 
         if pyxel.btn(pyxel.KEY_A):
             if self.x > self.raio:
@@ -50,23 +88,8 @@ class Jogo:
         if pyxel.btn(pyxel.KEY_S): 
                 if self.y < self.height-self.raio:
                     self.y += self.velocidade
-
-
-    
-    def draw(self):
-        pyxel.cls(15)
-        pyxel.circ(self.x, self.y, self.raio, 0)
-
         
-
-           
-        #x**2 + y**2 = r**2
-        
-        #pyxel.pset()
-
-        pyxel.rect(self.barrierx, self.barriery, self.barrierw, self.barrierh, 0)
-
-        pass
+Jogo()
 
 class Teste:
     
