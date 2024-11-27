@@ -2,22 +2,46 @@
 import pyxel
 import numpy as np
 
+class CircleAvatar:
+    def __init__(self, radius, initial_x, initial_y, matrix) -> None:
+        self.radius = radius
+        self.x = initial_x
+        self.y = initial_y
+        self.matrix = matrix
+        self.update_position(self.x, self.y)
+
+    
+    def update_position(self, target_x, target_y):
+
+        self.y = target_y
+        self.x = target_x
+
+        for y in range(self.y-self.radius, self.y+self.radius+1):
+            for x in range(self.x-self.radius, self.x+self.radius+1):
+                coord = ((x-self.x)**2) + ((y-self.y)**2)
+                if coord <= (self.radius**2)+1:
+                    self.matrix[y, x]+=1
+        
+
 class Jogo:
     def __init__(self) -> None:
-        self.width = 100
-        self.height = 100
+        self.width = 200
+        self.height = 200
         
         pyxel.init(self.width, self.height, title="Jogo", fps=60)
 
         self.raio = 5
         self.velocidade = 1
 
-
-        self.x = 6
-        self.y = 6
+        self.x = 5
+        self.y = 5
 
         self.obstacles_matrix = np.zeros((self.height, self.width))
-        self.avatar_matrix = np.zeros((self.height, self.width))
+        self.add_rect_obstacle(30, 0, 20, 40, 0, self.obstacles_matrix)
+
+        self.avatar_matrix = self.add_circle_obstacle(self.x, self.y, self.raio, (self.height, self.width))
+
+        self.screen_matrix = self.obstacles_matrix+self.avatar_matrix
 
         pyxel.run(self.update, self.draw)
     
@@ -31,91 +55,81 @@ class Jogo:
         self.keyboard_movement()
 
 
-    
     def draw(self):
         pyxel.cls(15)
-        #pyxel.circ(self.x, self.y, self.raio, 0)
+        #pyxel.circ(self.raio, 0)
 
-        self.add_circle_obstacle(self.x, self.y, self.raio, self.avatar_matrix)
-        self.add_rect_obstacle(60, 0, 6, 30, 0, self.obstacles_matrix)
+        self.screen_matrix = self.avatar_matrix + self.obstacles_matrix
+        self.paint_screen(self.screen_matrix)
 
+        self.matrix_to_txt(self.screen_matrix, 'screen_matrix')
+    
         pass
 
 
     def add_rect_obstacle(self, x, y, w, h, color, matrix):
         
         pyxel.rect(x, y, w, h, color)
-        matrix[y:y+h, x:x+w] = 1
-
-        with open('obstacles_matrix.txt', 'w+') as f:
-            for line in matrix:
-                f.write(' '.join([str(int(x)) for x in line]) + '\n')
+        matrix[y:y+h, x:x+w] += 1
     
 
-    def add_circle_obstacle(self, x, y, radius, matrix):
+    def add_circle_obstacle(self, h, k, radius, matrix_shape):
 
-        matrix.fill(0)
-        for i in range(y-radius, y+radius+1):
-            for j in range(x-radius, x+radius+1):
-                coord = ((j-x)**2) + ((i-y)**2)
+        matrix = np.zeros(matrix_shape)
+        for y in range(k-radius, k+radius+1):
+            for x in range(h-radius, h+radius+1):
+                coord = ((x-h)**2) + ((y-k)**2)
                 if coord <= (radius**2)+1:
-                    matrix[i, j]=1
-                    pyxel.pset(j, i, 0)
+                    matrix[y, x]+=1
+
+        return matrix
+
+    def paint_screen(self, matrix):
+        for y in range(matrix.shape[0]):
+            for x in range(matrix.shape[1]):
+                if matrix[y,x]==1:
+                    pyxel.pset(x, y, 0)
+
+
+    def goto_position(self, target_x, target_y, obst_matrix):
+
+        if target_x+self.raio>=obst_matrix.shape[1] or target_x-self.raio<0 or \
+            target_y+self.raio>=obst_matrix.shape[0] or target_y-self.raio<0:
+            return [self.x, self.y]
         
-        with open('avatar_matrix.txt', 'w+') as f:
-            for line in matrix:
-                f.write(' '.join([str(int(x)) for x in line]) + '\n')
+        matrix_test = self.obstacles_matrix + self.add_circle_obstacle(target_x, target_y, self.raio, (self.height, self.width))
+        self.matrix_to_txt(matrix_test, "matrix-test")
 
-    def is_position_allowed(self, x, y, obst_matrix):
-
-        if x+self.raio>obst_matrix.shape[1] or x-self.raio<0 or \
-            y+self.raio>obst_matrix.shape[0] or y-self.raio<0:
-            return False
-
-        
-        # for i in range(self.height):
-        #     for j in range(self.width):
-        #         #if i<12 and j<12:
-        #          #   print(((i+self.x)**2) + ((j+self.y)**2), self.raio**2)
-        #         if ((j+self.x)**2) + ((i+self.y)**2) == self.raio**2:
-        #             print(i, j)
-        
-        # self.add_circle_obstacle(x, y, self.raio)
-        result_matrix = (obst_matrix+self.avatar_matrix)
-
-        with open('result_matrix.txt', 'w+') as f:
-            for line in result_matrix:
-                f.write(' '.join([str(int(x)) for x in line]) + '\n')
-
-        if np.count_nonzero(result_matrix==2)>0:
-            return False
+        # return [target_x, target_y]
+        if np.count_nonzero(matrix_test==2)==0:
+            self.avatar_matrix = self.add_circle_obstacle(target_x, target_y, self.raio, (self.height, self.width))
+            return [target_x, target_y]
         else:
-            return True
+            print('false2')
+            return [self.x, self.y]
         
-        
-
     def keyboard_movement(self):
 
         if pyxel.btn(pyxel.KEY_D):
-            target_x = self.x + self.velocidade
-            if self.is_position_allowed(target_x, self.y, self.obstacles_matrix):
-                self.x=target_x
+            #self.avatar_matrix = self.add_circle_obstacle(self.x+self.velocidade, self.y, self.raio, self.avatar_matrix.shape)
+            self.x, self.y = self.goto_position(self.x+self.velocidade, self.y, self.obstacles_matrix)
 
         if pyxel.btn(pyxel.KEY_A):
-            target_x = self.x - self.velocidade
-            if self.is_position_allowed(target_x, self.y, self.obstacles_matrix):
-                self.x=target_x
-
+            self.x, self.y = self.goto_position(self.x-self.velocidade, self.y, self.obstacles_matrix)
+            
         if pyxel.btn(pyxel.KEY_W):
-            target_y = self.y - self.velocidade
-            if self.is_position_allowed(self.x, target_y, self.obstacles_matrix):
-                self.y=target_y
+            self.x, self.y = self.goto_position(self.x, self.y-self.velocidade, self.obstacles_matrix)
         
         if pyxel.btn(pyxel.KEY_S): 
-            target_y = self.y + self.velocidade
-            if self.is_position_allowed(self.x, target_y, self.obstacles_matrix):
-                self.y=target_y
-        
+            self.x, self.y = self.goto_position(self.x, self.y+self.velocidade, self.obstacles_matrix)
+    
+    def matrix_to_txt(self, matrix, filename):
+
+        with open(filename+'.txt', 'w+') as f:
+            for line in matrix:
+                f.write(' '.join([str(int(h)) for h in line]) + '\n')        
+
+
 Jogo()
 
 class Teste:
