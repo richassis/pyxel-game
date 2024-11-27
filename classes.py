@@ -37,7 +37,8 @@ class Jogo:
         self.y = 5
 
         self.obstacles_matrix = np.zeros((self.height, self.width))
-        self.add_rect_obstacle(30, 0, 20, 40, 0, self.obstacles_matrix)
+        self.add_rect_obstacle(30, 0, 20, 100, 0, self.obstacles_matrix)
+        self.add_rect_obstacle(30, 120, 100, 20, 0, self.obstacles_matrix)
 
         self.avatar_matrix = self.add_circle_obstacle(self.x, self.y, self.raio, (self.height, self.width))
 
@@ -105,7 +106,6 @@ class Jogo:
             self.avatar_matrix = self.add_circle_obstacle(target_x, target_y, self.raio, (self.height, self.width))
             return [target_x, target_y]
         else:
-            print('false2')
             return [self.x, self.y]
         
     def keyboard_movement(self):
@@ -122,6 +122,9 @@ class Jogo:
         
         if pyxel.btn(pyxel.KEY_S): 
             self.x, self.y = self.goto_position(self.x, self.y+self.velocidade, self.obstacles_matrix)
+
+        if pyxel.btn(pyxel.KEY_SPACE):
+            
     
     def matrix_to_txt(self, matrix, filename):
 
